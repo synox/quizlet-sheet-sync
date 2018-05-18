@@ -15,6 +15,12 @@ if (!sheet_id) {
   process.exit(1);
 }
 
+
+if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || process.env.ACCESS_TOKEN) {
+    console.log('Please provide ENV variables CLIENT_ID, CLIENT_SECRET and ACCESS_TOKEN');
+    process.exit(1);
+}
+
 // Bearer token for Quizlet
 const access_token = process.env.ACCESS_TOKEN;
 
