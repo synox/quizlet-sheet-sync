@@ -16,7 +16,7 @@ if (!sheet_id) {
 }
 
 
-if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || process.env.ACCESS_TOKEN) {
+if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.ACCESS_TOKEN) {
     console.log('Please provide ENV variables CLIENT_ID, CLIENT_SECRET and ACCESS_TOKEN');
     process.exit(1);
 }
