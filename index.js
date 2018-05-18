@@ -1,6 +1,6 @@
 #!/usr/local/bin/node
 
-const google = require('googleapis');
+const {google} = require('googleapis');
 const googleAuth = require('google-auth-library');
 const wanakana = require('wanakana');
 const request = require('request');
