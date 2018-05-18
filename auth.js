@@ -11,7 +11,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 var oauth2Client = new OAuth2(
   CLIENT_ID,
   CLIENT_SECRET,
-  "urn:ietf:wg:oauth:2.0:oob"
+    "https://localhost"
 );
 
 // generate a url that asks permissions for Google+ and Google Calendar scopes
