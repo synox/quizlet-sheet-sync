@@ -46,8 +46,7 @@ function getOrCreateMetadata() {
       pageSize: 100
     }, function(err, res) {
       if (err) return reject(err);
-
-      if (res.files.length > 0) {
+      if (res.files && res.files.length > 0) {
         console.log('found existing metadata file');
         drive.files.get({
           fileId: res.files[0].id,
@@ -206,6 +205,12 @@ getOrCreateMetadata().then(function(metadata) {
   sheets.spreadsheets.get({
     spreadsheetId: sheet_id,
   }, function(err, response) {
+    if (err) {
+      console.log("ERR", err);
+      return;
+    }
+
+
     let sheet_promises = [];
     response.sheets.forEach(function(sheet) {
       sheet_promises.push(new Promise(function(resolve,reject) {
