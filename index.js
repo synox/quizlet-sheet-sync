@@ -206,10 +206,9 @@ getOrCreateMetadata().then(function(metadata) {
     spreadsheetId: sheet_id,
   }, function(err, response) {
     if (err) {
+      // TODO: Catch exception correctly
       console.log("ERR", err);
-      return;
     }
-
 
     let sheet_promises = [];
     response.sheets.forEach(function(sheet) {
