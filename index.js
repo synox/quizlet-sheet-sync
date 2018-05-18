@@ -214,15 +214,16 @@ getOrCreateMetadata().then(function(metadata) {
     if (err) {
       // TODO: Catch exception correctly
       console.log("ERR", err);
+      return;
     }
 
     let sheet_promises = [];
-    response.sheets.forEach(function(sheet) {
+    response.data.sheets.forEach(function(sheet) {
       sheet_promises.push(new Promise(function(resolve,reject) {
         var tab_id = sheet.properties.sheetId;
         var tab_name = sheet.properties.title;
 
-        console.log('fetching', `${tab_name}!A:B`)
+        console.log('fetching', `${tab_name}!A:B`);
         sheets.spreadsheets.values.get({
           spreadsheetId: sheet_id,
           range: `${tab_name}!A:B`
@@ -230,7 +231,7 @@ getOrCreateMetadata().then(function(metadata) {
           if (err) return reject(err);
 
           let data = [];
-          response.values.forEach(function(row) {
+          response.data.values.forEach(function(row) {
             let romaji = row[0];
             let definition = row[1];
             let kana = wanakana.toKana(romaji);
