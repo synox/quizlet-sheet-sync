@@ -149,51 +149,41 @@ function getOrCreateSetId(metadata, set_name) {
 }
 
 // Update a Quizlet set with the given data. If it fails, create the set.
-function updateSet(metadata, set_name, data) {
-    return new Promise(function (resolve, reject) {
-        getOrCreateSetId(metadata, set_name).then(function (set_id) {
-            let set_data = {
-                whitespace: 1,
-                lang_definitions: 'en',
-            };
+async function updateSet(metadata, set_name, data) {
+    let set_id = await getOrCreateSetId(metadata, set_name);
+    let set_data = {
+        whitespace: 1,
+        lang_definitions: 'en',
+    };
+    Object.assign(set_data, data);
+    console.log(`Updating set ${set_id}: ${set_name}`);
 
-            Object.assign(set_data, data);
-
-            console.log(`Updating set ${set_id}: ${set_name}`);
-            request.put({
-                url: `https://api.quizlet.com/2.0/sets/${set_id}`,
-                headers: {
-                    Authorization: `Bearer ${access_token}`
-                },
-                form: set_data
-            }, function (err, httpResponse, body) {
-                if (err) return reject(err);
-                let response = JSON.parse(body);
-
-                if (httpResponse.http_code == 404 || httpResponse.http_code == 410) {
-                    // Set not found. Cached set ID may have been deleted.
-                    // Clear metadata cache for tab, and try creating one more time.
-                    console.log('set not found');
-                    metadata[set_name] = null;
-                    getOrCreateSetId(metadata, set_name).then(function (set_id) {
-                        request.put({
-                            url: `https://api.quizlet.com/2.0/sets/${set_id}`,
-                            headers: {
-                                Authorization: `Bearer ${access_token}`
-                            },
-                            form: set_data
-                        }, function (err, resp, body) {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    });
-                } else {
-                    console.log(`Updated set ${set_id}`);
-                    return resolve();
-                }
-            });
-        });
+    let httpResponse = await request.put({
+        url: `https://api.quizlet.com/2.0/sets/${set_id}`,
+        headers: {
+            Authorization: `Bearer ${access_token}`
+        },
+        form: set_data
     });
+
+    if (httpResponse.http_code === 404 || httpResponse.http_code === 410) {
+        // Set not found. Cached set ID may have been deleted.
+        // Clear metadata cache for tab, and try creating one more time.
+        console.log('set not found');
+        metadata[set_name] = null;
+        let set_id = await getOrCreateSetId(metadata, set_name);
+
+        await request.put({
+            url: `https://api.quizlet.com/2.0/sets/${set_id}`,
+            headers: {
+                Authorization: `Bearer ${access_token}`
+            },
+            form: set_data
+        });
+    } else {
+        console.log(`Updated set ${set_id}`);
+    }
+    return Promise.resolve();
 }
 
 
