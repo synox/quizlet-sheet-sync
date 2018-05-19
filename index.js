@@ -112,40 +112,34 @@ async function updateSheetMetadata(metadata, sheet_id) {
 
 // Lookup a set id by tab id in the sheet metadata.
 // If one isn't found, then create a new set.
-function getOrCreateSetId(metadata, set_name) {
-    return new Promise(function (resolve, reject) {
-        if (metadata[set_name]) {
-            console.log(`Found existing set id for tab ${set_name}`);
-            return resolve(metadata[set_name]);
-
-        } else {
-            // create the set first
-
-            console.log("Creating new set...");
-            request.post({
-                url: `https://api.quizlet.com/2.0/sets`,
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                    'Content-Type': 'application/javascript'
-                },
-                form: {
-                    title: `tab id ${set_name}`,
-                    visibility: visibility,
-                    whitespace: 1,
-                    lang_terms: 'ja',
-                    lang_definitions: 'en',
-                    definitions: ['', ''],
-                    terms: ['', ''],
-                }
-            }, function (err, response, body) {
-                if (err) return reject(err);
-                let set_id = JSON.parse(body).set_id;
-                metadata[set_name] = set_id;
-                console.log(`Created set ${set_id} for tab ${set_name}`);
-                return resolve(set_id);
-            });
-        }
-    });
+async function getOrCreateSetId(metadata, set_name) {
+    if (metadata[set_name]) {
+        console.log(`Found existing set id for tab ${set_name}`);
+        return Promise.resolve(metadata[set_name]);
+    } else {
+        // create the set first
+        console.log("Creating new set...");
+        let httpResponse = await request.post({
+            url: `https://api.quizlet.com/2.0/sets`,
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+                'Content-Type': 'application/javascript'
+            },
+            form: {
+                title: `tab id ${set_name}`,
+                visibility: visibility,
+                whitespace: 1,
+                lang_terms: 'ja',
+                lang_definitions: 'en',
+                definitions: ['', ''],
+                terms: ['', ''],
+            }
+        });
+        let set_id = httpResponse.data.set_id;
+        metadata[set_name] = set_id;
+        console.log(`Created set ${set_id} for tab ${set_name}`);
+        return Promise.resolve(set_id);
+    }
 }
 
 // Update a Quizlet set with the given data. If it fails, create the set.
