@@ -210,75 +210,68 @@ async function main() {
     // 6. Save set metadata
     try {
         let metadata = await getOrCreateMetadata();
-        sheets.spreadsheets.get({
-            spreadsheetId: sheet_id,
-        }, function (err, response) {
-            if (err) {
-                // TODO: Catch exception correctly
-                console.log("ERR", err);
-                return;
-            }
+        let response = await sheets.spreadsheets.get({spreadsheetId: sheet_id});
 
-            let sheet_promises = [];
-            response.data.sheets.forEach(function (sheet) {
-                sheet_promises.push(new Promise(function (resolve, reject) {
-                    var tab_id = sheet.properties.sheetId;
-                    var tab_name = sheet.properties.title;
 
-                    console.log('fetching', `${tab_name}!A:B`);
-                    sheets.spreadsheets.values.get({
-                        spreadsheetId: sheet_id,
-                        range: `${tab_name}!A:B`
-                    }, function (err, response) {
-                        if (err) return reject(err);
+        let sheet_promises = [];
+        response.data.sheets.forEach(function (sheet) {
+            sheet_promises.push(new Promise(function (resolve, reject) {
+                var tab_id = sheet.properties.sheetId;
+                var tab_name = sheet.properties.title;
 
-                        let data = [];
-                        response.data.values.forEach(function (row) {
-                            let romaji = row[0];
-                            let definition = row[1];
-                            let kana = wanakana.toKana(romaji);
-                            data.push({
-                                romaji: romaji.toLowerCase(),
-                                definition: definition,
-                                kana: kana
-                            });
+                console.log('fetching', `${tab_name}!A:B`);
+                sheets.spreadsheets.values.get({
+                    spreadsheetId: sheet_id,
+                    range: `${tab_name}!A:B`
+                }, function (err, response) {
+                    if (err) return reject(err);
+
+                    let data = [];
+                    response.data.values.forEach(function (row) {
+                        let romaji = row[0];
+                        let definition = row[1];
+                        let kana = wanakana.toKana(romaji);
+                        data.push({
+                            romaji: romaji.toLowerCase(),
+                            definition: definition,
+                            kana: kana
                         });
-
-                        terms = data.map(function (i) {
-                            return i.romaji
-                        });
-                        terms_kana = data.map(function (i) {
-                            return i.kana
-                        });
-                        definitions = data.map(function (i) {
-                            return i.definition
-                        });
-
-                        Promise.all([
-                            updateSet(metadata, tab_id, {
-                                title: tab_name,
-                                lang_terms: 'ja-ro',
-                                definitions: definitions,
-                                terms: terms,
-                            }),
-                            updateSet(metadata, tab_id + ':kana', {
-                                title: tab_name + ' (Kana)',
-                                lang_terms: 'ja',
-                                definitions: definitions,
-                                terms: terms_kana,
-                            })
-                        ]).then(resolve, reject);
                     });
-                }));
-            });
 
-            Promise.all(sheet_promises).then(function (results) {
-                updateSheetMetadata(metadata, sheet_id);
-            }, function (reason) {
-                console.log('error', reason);
-                process.exit(1);
-            });
-        })
+                    terms = data.map(function (i) {
+                        return i.romaji
+                    });
+                    terms_kana = data.map(function (i) {
+                        return i.kana
+                    });
+                    definitions = data.map(function (i) {
+                        return i.definition
+                    });
+
+                    Promise.all([
+                        updateSet(metadata, tab_id, {
+                            title: tab_name,
+                            lang_terms: 'ja-ro',
+                            definitions: definitions,
+                            terms: terms,
+                        }),
+                        updateSet(metadata, tab_id + ':kana', {
+                            title: tab_name + ' (Kana)',
+                            lang_terms: 'ja',
+                            definitions: definitions,
+                            terms: terms_kana,
+                        })
+                    ]).then(resolve, reject);
+                });
+            }));
+        });
+
+        Promise.all(sheet_promises).then(function (results) {
+            updateSheetMetadata(metadata, sheet_id);
+        }, function (reason) {
+            console.log('error', reason);
+            process.exit(1);
+        });
 
     } catch (reason) {
         console.log('error', reason);
