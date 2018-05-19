@@ -213,9 +213,9 @@ async function main() {
         let response = await sheets.spreadsheets.get({spreadsheetId: sheet_id});
 
 
-        let sheet_promises = [];
-        response.data.sheets.forEach(function (sheet) {
-            sheet_promises.push(new Promise(function (resolve, reject) {
+        let sheetsList = response.data.sheets;
+        let sheet_promises = sheetsList.map(function (sheet) {
+            return new Promise(function (resolve, reject) {
                 var tab_id = sheet.properties.sheetId;
                 var tab_name = sheet.properties.title;
 
@@ -263,7 +263,7 @@ async function main() {
                         })
                     ]).then(resolve, reject);
                 });
-            }));
+            });
         });
 
         Promise.all(sheet_promises).then(function (results) {
