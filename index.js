@@ -43,45 +43,38 @@ const visibility = 'public';
 
 // Get or create a file for the requested spreadsheet, stored in Google Drive
 // in your `appDataFolder`, to map sheet tab IDs to Quizlet set IDs.
-function getOrCreateMetadata() {
-    return new Promise(function (resolve, reject) {
-        console.log('looking...');
-        drive.files.list({
-            spaces: 'appDataFolder',
-            q: `name = "${sheet_id}"`,
-            pageSize: 100
-        }, function (err, response) {
-            if (err) return reject(err);
-            if (response.data.files && response.data.files.length > 0) {
-                console.log('found existing metadata file');
-                drive.files.get({
-                    fileId: response.data.files[0].id,
-                    alt: 'media'
-                }, function (err, response) {
-                    if (err) return reject(err);
-                    console.log('retrieved metadata contents');
-                    resolve(response.data);
-                })
-
-            } else {
-                console.log('creating metadata file...');
-                drive.files.create({
-                    resource: {
-                        name: sheet_id,
-                        parents: ['appDataFolder']
-                    },
-                    media: {
-                        mimeType: 'application/json',
-                        body: '{}'
-                    }
-                }, function (err, file) {
-                    if (err) return reject(err);
-                    console.log('created metadata file');
-                    resolve({});
-                });
-            }
-        })
+async function getOrCreateMetadata() {
+    console.log('looking for metadata...');
+    let httpResponse = await drive.files.list({
+        spaces: 'appDataFolder',
+        q: `name = "${sheet_id}"`,
+        pageSize: 100
     });
+
+    let files = httpResponse.data.files;
+    if (files && files.length > 0) {
+        console.log('found existing metadata file');
+        let fileContentResponse = await drive.files.get({
+            fileId: files[0].id,
+            alt: 'media'
+        });
+        console.log('retrieved metadata contents');
+        return Promise.resolve(fileContentResponse.data);
+    } else {
+        console.log('creating metadata file...');
+        await drive.files.create({
+            resource: {
+                name: sheet_id,
+                parents: ['appDataFolder']
+            },
+            media: {
+                mimeType: 'application/json',
+                body: '{}'
+            }
+        });
+        console.log('created metadata file');
+        return Promise.resolve({});
+    }
 }
 
 // Update metadata in Google Drive's appDataFolder
@@ -222,7 +215,7 @@ async function copySheetToQuizlet(sheet, metadata) {
 }
 
 
-function loadTableData(sheet_id, tab_id, tab_name) {
+async function loadTableData(sheet_id, tab_id, tab_name) {
     console.log('fetching', `${tab_name}!A:B`);
     return sheets.spreadsheets.values.get({spreadsheetId: sheet_id, range: `${tab_name}!A:B`});
 }
