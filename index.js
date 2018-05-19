@@ -50,17 +50,17 @@ function getOrCreateMetadata() {
       spaces: 'appDataFolder',
       q: `name = "${sheet_id}"`,
       pageSize: 100
-    }, function(err, res) {
+    }, function(err, response) {
       if (err) return reject(err);
-      if (res.files && res.files.length > 0) {
+      if (response.data.files && response.data.files.length > 0) {
         console.log('found existing metadata file');
         drive.files.get({
-          fileId: res.files[0].id,
+          fileId: response.data.files[0].id,
           alt: 'media'
-        }, function(err, res) {
+        }, function(err, response) {
           if (err) return reject(err);
           console.log('retrieved metadata contents');
-          resolve(res);
+          resolve(response.data);
         })
 
       } else {
@@ -93,13 +93,13 @@ function updateSheetMetadata(metadata, sheet_id) {
       spaces: 'appDataFolder',
       q: `name = "${sheet_id}"`,
       pageSize: 100
-    }, function(err, res) {
+    }, function(err, response) {
       if (err) return reject(err);
 
       console.log('saving metadata...');
-      if (res.files.length > 0) {
+      if (response.data.files.length > 0) {
         drive.files.update({
-          fileId: res.files[0].id,
+          fileId: response.data.files[0].id,
           media: {
             mimeType: 'application/json',
             body: JSON.stringify(metadata)
@@ -141,7 +141,7 @@ function getOrCreateSetId(metadata, set_name) {
           definitions: ['', ''],
           terms: ['', ''],
         }
-      }, function(err, resp, body) {
+      }, function(err, response, body) {
         if (err) return reject(err);
         let set_id = JSON.parse(body).set_id;
         metadata[set_name] = set_id;
@@ -170,11 +170,11 @@ function updateSet(metadata, set_name, data) {
           Authorization: `Bearer ${access_token}`
         },
         form: set_data
-      }, function(err, resp, body) {
+      }, function(err, httpResponse, body) {
         if (err) return reject(err);
         let response = JSON.parse(body);
 
-        if (response.http_code == 404 || response.http_code == 410) {
+        if (httpResponse.http_code == 404 || httpResponse.http_code == 410) {
           // Set not found. Cached set ID may have been deleted.
           // Clear metadata cache for tab, and try creating one more time.
           console.log('set not found');
