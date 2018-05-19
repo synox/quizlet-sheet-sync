@@ -85,33 +85,29 @@ function getOrCreateMetadata() {
 }
 
 // Update metadata in Google Drive's appDataFolder
-function updateSheetMetadata(metadata, sheet_id) {
-    return new Promise(function (resolve, reject) {
-        // Search for the file again by name to get the fileId
-        // (so we don't have to save it)
-        drive.files.list({
-            spaces: 'appDataFolder',
-            q: `name = "${sheet_id}"`,
-            pageSize: 100
-        }, function (err, response) {
-            if (err) return reject(err);
+async function updateSheetMetadata(metadata, sheet_id) {
+    // Search for the file again by name to get the fileId
+    // (so we don't have to save it)
+    let response = await drive.files.list({
+        spaces: 'appDataFolder',
+        q: `name = "${sheet_id}"`,
+        pageSize: 100
+    });
+    console.log('saving metadata...');
 
-            console.log('saving metadata...');
-            if (response.data.files.length > 0) {
-                drive.files.update({
-                    fileId: response.data.files[0].id,
-                    media: {
-                        mimeType: 'application/json',
-                        body: JSON.stringify(metadata)
-                    }
-                }, function (err, file) {
-                    if (err) return reject(err);
-                    console.log('metadata saved');
-                    resolve({});
-                });
+    let files = response.data.files;
+    if (files.length > 0) {
+        await drive.files.update({
+            fileId: files[0].id,
+            media: {
+                mimeType: 'application/json',
+                body: JSON.stringify(metadata)
             }
         });
-    });
+        console.log('metadata saved');
+    }
+
+    return await Promise.resolve({});
 }
 
 // Lookup a set id by tab id in the sheet metadata.
@@ -200,6 +196,48 @@ function updateSet(metadata, set_name, data) {
     });
 }
 
+
+async function copySheetToQuizlet(sheet, metadata) {
+    let tab_id = sheet.properties.sheetId;
+    let tab_name = sheet.properties.title;
+
+
+    let tableDataResponse = await loadTableData(sheet_id, tab_id, tab_name);
+    let rows = tableDataResponse.data.values;
+
+    let data = []; // TODO: .map
+    for (const row of rows) {
+        let romaji = row[0];
+        let definition = row[1];
+        let kana = wanakana.toKana(romaji);
+        data.push({
+            romaji: romaji.toLowerCase(),
+            definition: definition,
+            kana: kana
+        });
+    }
+
+    terms = data.map(i => i.romaji);
+    terms_kana = data.map(i => i.kana);
+    definitions = data.map(i => i.definition);
+
+
+    let updateSet1 = updateSet(metadata, tab_id, {
+        title: tab_name,
+        lang_terms: 'ja-ro',
+        definitions: definitions,
+        terms: terms,
+    });
+    let updateSet2 = updateSet(metadata, tab_id + ':kana', {
+        title: tab_name + ' (Kana)',
+        lang_terms: 'ja',
+        definitions: definitions,
+        terms: terms_kana,
+    });
+    return await Promise.all([updateSet1, updateSet2]);
+}
+
+
 function loadTableData(sheet_id, tab_id, tab_name) {
     console.log('fetching', `${tab_name}!A:B`);
     return sheets.spreadsheets.values.get({spreadsheetId: sheet_id, range: `${tab_name}!A:B`});
@@ -216,62 +254,14 @@ async function main() {
     try {
         let metadata = await getOrCreateMetadata();
         let response = await sheets.spreadsheets.get({spreadsheetId: sheet_id});
-
-
         let sheetsList = response.data.sheets;
-
-
-        let sheet_promises = sheetsList.map(async function (sheet) {
-            let tab_id = sheet.properties.sheetId;
-            let tab_name = sheet.properties.title;
-
-
-            let tableDataResponse = await loadTableData(sheet_id, tab_id, tab_name);
-            let rows = tableDataResponse.data.values;
-
-            let data = []; // TODO: .map
-            for (const row of rows) {
-                let romaji = row[0];
-                let definition = row[1];
-                let kana = wanakana.toKana(romaji);
-                data.push({
-                    romaji: romaji.toLowerCase(),
-                    definition: definition,
-                    kana: kana
-                });
-            }
-
-            terms = data.map(i => i.romaji);
-            terms_kana = data.map(i => i.kana);
-            definitions = data.map(i => i.definition);
-
-            return new Promise(function (resolve, reject) {
-
-                Promise.all([
-                    updateSet(metadata, tab_id, {
-                        title: tab_name,
-                        lang_terms: 'ja-ro',
-                        definitions: definitions,
-                        terms: terms,
-                    }),
-                    updateSet(metadata, tab_id + ':kana', {
-                        title: tab_name + ' (Kana)',
-                        lang_terms: 'ja',
-                        definitions: definitions,
-                        terms: terms_kana,
-                    })
-                ]).then(resolve, reject);
-            });
-        });
-
-        let results = await Promise.all(sheet_promises);
-        updateSheetMetadata(metadata, sheet_id);
-
-    } catch (reason) {
+        await Promise.all(sheetsList.map(sheet => copySheetToQuizlet(sheet, metadata)));
+        await updateSheetMetadata(metadata, sheet_id);
+    } catch
+        (reason) {
         console.log('error', reason);
         process.exit(1);
     }
-
 }
 
 main();
