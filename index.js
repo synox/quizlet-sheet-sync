@@ -227,29 +227,25 @@ async function main() {
 
 
             let tableDataResponse = await loadTableData(sheet_id, tab_id, tab_name);
+            let rows = tableDataResponse.data.values;
+
+            let data = []; // TODO: .map
+            for (const row of rows) {
+                let romaji = row[0];
+                let definition = row[1];
+                let kana = wanakana.toKana(romaji);
+                data.push({
+                    romaji: romaji.toLowerCase(),
+                    definition: definition,
+                    kana: kana
+                });
+            }
+
+            terms = data.map(i => i.romaji);
+            terms_kana = data.map(i => i.kana);
+            definitions = data.map(i => i.definition);
 
             return new Promise(function (resolve, reject) {
-                let data = [];
-                tableDataResponse.data.values.forEach(function (row) {
-                    let romaji = row[0];
-                    let definition = row[1];
-                    let kana = wanakana.toKana(romaji);
-                    data.push({
-                        romaji: romaji.toLowerCase(),
-                        definition: definition,
-                        kana: kana
-                    });
-                });
-
-                terms = data.map(function (i) {
-                    return i.romaji
-                });
-                terms_kana = data.map(function (i) {
-                    return i.kana
-                });
-                definitions = data.map(function (i) {
-                    return i.definition
-                });
 
                 Promise.all([
                     updateSet(metadata, tab_id, {
