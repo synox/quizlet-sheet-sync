@@ -1,12 +1,11 @@
 #!/usr/local/bin/node
 
 const {google} = require('googleapis');
-const googleAuth = require('google-auth-library');
 const wanakana = require('wanakana');
-const request = require('request');
+const request = require('request-promise-native');
 const fs = require('fs');
 
-var OAuth2 = google.auth.OAuth2;
+let OAuth2 = google.auth.OAuth2;
 
 const sheet_id = process.argv[2];
 if (!sheet_id) {
@@ -26,8 +25,6 @@ const access_token = process.env.ACCESS_TOKEN;
 
 // Authorize google client library
 const tokens = JSON.parse(fs.readFileSync('credentials.json'));
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
 var authClient = new OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET,
@@ -128,7 +125,8 @@ async function getOrCreateSetId(metadata, set_name) {
                 terms: ['', ''],
             }
         });
-        let set_id = httpResponse.data.set_id;
+        let setMetaData = JSON.parse(httpResponse);
+        let set_id = setMetaData.set_id;
         metadata[set_name] = set_id;
         console.log(`Created set ${set_id} for tab ${set_name}`);
         return Promise.resolve(set_id);
@@ -185,13 +183,16 @@ async function copySheetToQuizlet(sheet, metadata) {
     let data = []; // TODO: .map
     for (const row of rows) {
         let romaji = row[0];
-        let definition = row[1];
-        let kana = wanakana.toKana(romaji);
-        data.push({
-            romaji: romaji.toLowerCase(),
-            definition: definition,
-            kana: kana
-        });
+        // Skip empty lines
+        if (romaji) {
+            let definition = row[1];
+            let kana = wanakana.toKana(romaji);
+            data.push({
+                romaji: romaji.toLowerCase(),
+                definition: definition,
+                kana: kana
+            });
+        }
     }
 
     terms = data.map(i => i.romaji);
