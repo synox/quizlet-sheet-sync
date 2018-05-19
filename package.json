@@ -12,8 +12,8 @@
     "wanakana": "*",
     "googleapis": "*",
     "google-auth-library": "*",
-    "request": "*",
-    "readline": "*"
+    "readline": "*",
+    "request-promise-native": "*"
   },
   "licenses": [
     {
