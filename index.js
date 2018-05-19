@@ -200,6 +200,11 @@ function updateSet(metadata, set_name, data) {
     });
 }
 
+function loadTableData(sheet_id, tab_id, tab_name) {
+    console.log('fetching', `${tab_name}!A:B`);
+    return sheets.spreadsheets.values.get({spreadsheetId: sheet_id, range: `${tab_name}!A:B`});
+}
+
 async function main() {
     // Run the script
     // 1. Get set metadata
@@ -214,55 +219,52 @@ async function main() {
 
 
         let sheetsList = response.data.sheets;
-        let sheet_promises = sheetsList.map(function (sheet) {
+
+
+        let sheet_promises = sheetsList.map(async function (sheet) {
+            let tab_id = sheet.properties.sheetId;
+            let tab_name = sheet.properties.title;
+
+
+            let tableDataResponse = await loadTableData(sheet_id, tab_id, tab_name);
+
             return new Promise(function (resolve, reject) {
-                var tab_id = sheet.properties.sheetId;
-                var tab_name = sheet.properties.title;
-
-                console.log('fetching', `${tab_name}!A:B`);
-                sheets.spreadsheets.values.get({
-                    spreadsheetId: sheet_id,
-                    range: `${tab_name}!A:B`
-                }, function (err, response) {
-                    if (err) return reject(err);
-
-                    let data = [];
-                    response.data.values.forEach(function (row) {
-                        let romaji = row[0];
-                        let definition = row[1];
-                        let kana = wanakana.toKana(romaji);
-                        data.push({
-                            romaji: romaji.toLowerCase(),
-                            definition: definition,
-                            kana: kana
-                        });
+                let data = [];
+                tableDataResponse.data.values.forEach(function (row) {
+                    let romaji = row[0];
+                    let definition = row[1];
+                    let kana = wanakana.toKana(romaji);
+                    data.push({
+                        romaji: romaji.toLowerCase(),
+                        definition: definition,
+                        kana: kana
                     });
-
-                    terms = data.map(function (i) {
-                        return i.romaji
-                    });
-                    terms_kana = data.map(function (i) {
-                        return i.kana
-                    });
-                    definitions = data.map(function (i) {
-                        return i.definition
-                    });
-
-                    Promise.all([
-                        updateSet(metadata, tab_id, {
-                            title: tab_name,
-                            lang_terms: 'ja-ro',
-                            definitions: definitions,
-                            terms: terms,
-                        }),
-                        updateSet(metadata, tab_id + ':kana', {
-                            title: tab_name + ' (Kana)',
-                            lang_terms: 'ja',
-                            definitions: definitions,
-                            terms: terms_kana,
-                        })
-                    ]).then(resolve, reject);
                 });
+
+                terms = data.map(function (i) {
+                    return i.romaji
+                });
+                terms_kana = data.map(function (i) {
+                    return i.kana
+                });
+                definitions = data.map(function (i) {
+                    return i.definition
+                });
+
+                Promise.all([
+                    updateSet(metadata, tab_id, {
+                        title: tab_name,
+                        lang_terms: 'ja-ro',
+                        definitions: definitions,
+                        terms: terms,
+                    }),
+                    updateSet(metadata, tab_id + ':kana', {
+                        title: tab_name + ' (Kana)',
+                        lang_terms: 'ja',
+                        definitions: definitions,
+                        terms: terms_kana,
+                    })
+                ]).then(resolve, reject);
             });
         });
 
