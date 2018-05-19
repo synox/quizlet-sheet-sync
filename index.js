@@ -266,12 +266,8 @@ async function main() {
             });
         });
 
-        Promise.all(sheet_promises).then(function (results) {
-            updateSheetMetadata(metadata, sheet_id);
-        }, function (reason) {
-            console.log('error', reason);
-            process.exit(1);
-        });
+        let results = await Promise.all(sheet_promises);
+        updateSheetMetadata(metadata, sheet_id);
 
     } catch (reason) {
         console.log('error', reason);
